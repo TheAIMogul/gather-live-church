@@ -62,7 +62,7 @@ npx wrangler secret put OPENAI_API_KEY
 
 Secrets belong in Cloudflare Worker secrets, never in frontend code, Git, or a `VITE_` variable. Optional model overrides are `OPENAI_TEXT_MODEL`, `OPENAI_REALTIME_MODEL`, and `OPENAI_TRANSCRIPTION_MODEL`. Deployment does not require a separate server or database service.
 
-To start a real service: choose the speaker language and microphone in the studio, create a live service, start translation, and open the display URL on the projector. For a phone input, select Phone, start the service, scan its microphone QR code, and tap Connect microphone on the phone. Keep the phone page open. An internet-reachable HTTPS deployment allows the phone and projector to use different networks.
+To start a real service: choose the speaker language and microphone in the studio, click Start a live service. Gather opens the live display in a new tab and starts the selected microphone. Allow microphone access in the control tab if prompted. For a phone input, select Phone, click Start, scan the microphone QR code, and tap Connect microphone on the phone. Keep the phone page open. An internet-reachable HTTPS deployment allows the phone and projector to use different networks.
 
 ## Meaning, scripture and motion
 

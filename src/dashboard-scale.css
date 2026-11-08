@@ -17,3 +17,11 @@
 .studio-layout>*,.lower-studio>*,.branding-layout>*{min-width:0}
 @media(max-width:900px){.lower-studio{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:640px){.section-heading{flex-wrap:wrap}.section-heading>div{min-width:0}.display-link{max-width:100%}.workspace-summary .eyebrow{flex-wrap:wrap}.phone-privacy{flex-wrap:wrap;text-align:center}}
+/* The translation direction belongs next to Start, before anyone speaks. */
+.quick-direction{display:grid;grid-template-columns:1fr 1fr;gap:7px;width:100%;padding:5px;border-radius:18px;background:#e4e9dc;border:1px solid #eef1e7}
+.quick-direction button{border-radius:14px;min-height:46px;padding:8px 10px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:14px;white-space:nowrap;color:#617357}
+.quick-direction button[aria-pressed=true]{background:#f9faf2;color:#263d2c;box-shadow:0 2px 7px #283b2819;font-weight:600}
+.quick-direction button:hover:not([aria-pressed=true]){background:#f3f6ed}
+.quick-direction button svg{width:14px;height:14px}
+@media(max-width:640px){.quick-direction button{font-size:14px;min-height:50px}.quick-direction{gap:4px}}
+@media(max-width:360px){.quick-direction button{font-size:12px;padding:7px 4px}.quick-direction button svg{width:12px;height:12px}}
