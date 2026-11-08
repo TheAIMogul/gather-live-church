@@ -1,0 +1,7 @@
+# Copy to .dev.vars for local development. Never commit real secrets.
+DEV_MODE=true
+OPENAI_API_KEY=
+ADMIN_PASSWORD=
+# Optional current model overrides:
+# OPENAI_TEXT_MODEL=gpt-6-luna
+# OPENAI_TRANSCRIPTION_MODEL=gpt-realtime-whisper
