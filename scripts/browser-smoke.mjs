@@ -49,7 +49,7 @@ try{
  await quickPage.getByRole('button',{name:'Start a live service',exact:true}).click();
  const displayTab=await displayTabPromise;captureErrors(displayTab);
  await expect(displayTab).toHaveURL(/\/display\/[0-9a-f-]+\?token=/);
- await expect(displayTab.locator('.projection-status')).toContainText('Live');
+ await expect(displayTab.locator('.projection-status')).toContainText('Waiting for microphone');
  await expect(quickPage.locator('.language-direction')).toContainText('English');
  await expect(quickPage.locator('.language-direction')).toContainText('Spanish');
  await expect(quickPage.locator('.pairing-qr img')).toBeVisible();

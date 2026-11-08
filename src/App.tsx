@@ -106,13 +106,13 @@ export function Projection({room,preview=false,connected=true}:{room:RoomState;p
   void document.fonts.ready.then(fit);
   return()=>observer.disconnect();
  },[segment?.id,settings.textSize,settings.showOriginal,settings.showSummary,settings.logoSize,settings.logo,preview,captionSize,room.summary,room.blank]);
- const status=!connected?'Connection lost':room.mode==='demo'?'Demo':room.status==='live'?'Live':room.status==='paused'?'Paused':room.status==='ended'?'Service ended':'Ready';
+ const status=!connected?'Connection lost':room.mode==='demo'?'Demo':room.status==='live'?(room.micConnected?'Live':'Waiting for microphone'):room.status==='paused'?'Paused':room.status==='ended'?'Service ended':'Ready';
  async function fullscreen(){try{if(document.fullscreenElement)await document.exitFullscreen();else await outer.current?.requestFullscreen();setFull(Boolean(document.fullscreenElement));}catch{/* Browser may not support fullscreen. */}}
  return <div ref={outer} className={`projection theme-${settings.theme} ${preview?'preview':''} ${room.blank?'is-blank':''} motion-${settings.motion}`} style={{'--caption-size':`${captionSize}px`,'--brand-accent':settings.accentColor} as React.CSSProperties}>
   {!room.blank&&<>
    <header className={`projection-header logo-${settings.logoPosition}`}>
     <div className="church-identity">{settings.logo?<img src={settings.logo} alt={`${settings.churchName} logo`} style={{height:preview?settings.logoSize*.55:settings.logoSize}}/>:<span className="church-monogram">{settings.churchName.split(' ').slice(0,2).map(w=>w[0]).join('')}</span>}<span>{settings.churchName}</span></div>
-    <span className={`projection-status ${room.status==='live'&&connected?'live':''}`}><i/>{status}</span>
+    <span className={`projection-status ${room.status==='live'&&room.micConnected&&connected?'live':''}`}><i/>{status}</span>
    </header>
    <div className={`projection-message ${scripture?'scripture':''}`}>
     {prior&&(segment?.translation.length||0)<220&&<p className="previous-phrase" aria-hidden="true">{prior.translation}</p>}
@@ -120,7 +120,7 @@ export function Projection({room,preview=false,connected=true}:{room:RoomState;p
     <div className="caption" aria-live={preview?'off':'polite'} lang={room.targetLanguage}>
      {segment?<span key={segment.id} className="phrase">{segment.translation.split(' ').map((word,i)=><span className="dancing-word" key={`${segment.id}-${i}`} style={{animationDelay:`${i*(scripture?95:65)}ms`}}>{word}{' '}</span>)}</span>:<span className="waiting-caption">Every voice.<br/><span>Together.</span></span>}
     </div>
-    {settings.showOriginal&&<p className="original-caption" lang={room.sourceLanguage}>{segment?.source||(room.status==='live'?'Listening for the next phrase…':'A place for everyone to follow along.')}</p>}
+    {settings.showOriginal&&<p className="original-caption" lang={room.sourceLanguage}>{segment?.source||(room.status==='live'?(room.micConnected?'Listening for the next phrase…':'Allow microphone access in the control tab, or connect a phone.'):'A place for everyone to follow along.')}</p>}
    </div>
    {settings.showSummary&&room.summary&&<div className="projection-summary"><span className="eyebrow">The message so far <small>AI summary{room.mode==='demo'?' · Sample text':''}{room.summaryStale?' · Update delayed':''}</small></span><p>{room.summary}</p></div>}
   </>}

@@ -4,7 +4,7 @@
 
 Gather connects a computer or phone microphone to OpenAI, interprets complete phrases in context, and shares animated Spanish ↔ English captions with a separate browser or projector. Scripture references have a distinct gold treatment. Branding and operator controls live separately from the audience display.
 
-Current deployment: [Open Gather](https://gather.micahberkley.com). No account or password is needed. Choose a microphone and language in the studio, then start a live service.
+Current deployment: [Open Gather](https://church.micahberkley.com). No account or password is needed. Choose a microphone and language in the studio, then start a live service.
 
 ## What is included
 
