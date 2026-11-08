@@ -4,7 +4,7 @@ import { defaultSettings, type DisplaySettings, type RoomState } from '../shared
 import { createRealtimeSession, interpretPhrase, summarize } from './openai';
 
 type Role = 'operator' | 'microphone' | 'display';
-type StoredRoom = RoomState & { displayToken: string; micToken: string; revision: number; expiresAt: number; summaryAttemptAt?: number; inputLease?: { clientId: string; until: number; generation: string } };
+type StoredRoom = RoomState & { ownerHash: string; displayToken: string; micToken: string; revision: number; expiresAt: number; summaryAttemptAt?: number; inputLease?: { clientId: string; until: number; generation: string } };
 const retention = 24 * 3600_000;
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers: { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
 class HttpError extends Error { constructor(message: string, readonly status = 400) { super(message); } }
@@ -79,15 +79,17 @@ export class Room extends DurableObject<Env> {
     ctx.blockConcurrencyWhile(async () => { this.room = await ctx.storage.get<StoredRoom>('room'); });
   }
   private role(request: Request): Role | null {
-    if (request.headers.get('X-Gather-Operator') === 'true') return 'operator';
     const token = new URL(request.url).searchParams.get('token');
-    if (!token || !this.room) return null;
-    if (token === this.room.micToken) return 'microphone';
-    if (token === this.room.displayToken) return 'display';
-    return null;
+    if (!this.room) return null;
+    if (token) {
+      if (token === this.room.micToken) return 'microphone';
+      if (token === this.room.displayToken) return 'display';
+      return null;
+    }
+    return this.room.ownerHash && request.headers.get('X-Gather-Owner') === this.room.ownerHash ? 'operator' : null;
   }
   private snapshot(role: Role): RoomState {
-    const { revision: _revision, expiresAt: _expiresAt, inputLease: _inputLease, summaryAttemptAt: _summaryAttemptAt, displayToken, micToken, ...state } = this.room!;
+    const { ownerHash: _ownerHash, revision: _revision, expiresAt: _expiresAt, inputLease: _inputLease, summaryAttemptAt: _summaryAttemptAt, displayToken, micToken, ...state } = this.room!;
     return role === 'operator' ? { ...state, displayToken, micToken } : state;
   }
   private async save(): Promise<void> {
@@ -129,24 +131,15 @@ export class Room extends DurableObject<Env> {
   }
   private async route(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    // These endpoints are reached only through the Worker binding, never a public route.
-    if (url.pathname.startsWith('/__login')) {
-      if (url.pathname.endsWith('/reset')) { await this.ctx.storage.deleteAll(); return json({ ok: true }); }
-      const now = Date.now();
-      const saved = await this.ctx.storage.get<{ count: number; until: number }>('attempts');
-      const attempt = saved && saved.until > now ? saved : { count: 0, until: now + 600_000 };
-      attempt.count++;
-      await this.ctx.storage.put('attempts', attempt);
-      await this.ctx.storage.setAlarm(attempt.until);
-      return json({ ok: attempt.count <= 10 }, attempt.count <= 10 ? 200 : 429);
-    }
     const parts = url.pathname.split('/');
     const id = parts[3], action = parts[4] || '';
     if (action === 'create' && request.method === 'POST') {
-      if (request.headers.get('X-Gather-Operator') !== 'true') throw new HttpError('Sign in to create a service.', 401);
+      const ownerHash = request.headers.get('X-Gather-Owner');
+      if (!ownerHash || !/^[a-f0-9]{64}$/.test(ownerHash)) throw new HttpError('Browser session is unavailable. Reload and try again.', 401);
+      if (this.room) throw new HttpError('This service already exists.', 409);
       const initial = await readJson(request);
       this.room = {
-        id, status: 'idle', mode: 'live', sourceLanguage: initial.sourceLanguage === 'en' ? 'en' : 'es',
+        id, ownerHash, status: 'idle', mode: 'live', sourceLanguage: initial.sourceLanguage === 'en' ? 'en' : 'es',
         targetLanguage: initial.sourceLanguage === 'en' ? 'es' : 'en', settings: { ...defaultSettings },
         segments: [], summary: '', blank: false, micConnected: false, micName: '',
         displayToken: crypto.randomUUID().replaceAll('-', ''), micToken: crypto.randomUUID().replaceAll('-', ''),

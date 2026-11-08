@@ -1,10 +1,9 @@
 /** Cost-free integration checks against a running Wrangler Worker.
  * Run: node tests/rooms.integration.mjs
  * Optional: GATHER_TEST_URL=https://your-worker.example
- * Credentials are read internally; response bodies, cookies and scoped tokens are never logged.
+ * No password is needed; response bodies, cookies and scoped tokens are never logged.
  */
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const base = new URL(process.env.GATHER_TEST_URL || 'http://127.0.0.1:8787');
@@ -12,24 +11,6 @@ if (!['http:', 'https:'].includes(base.protocol) || base.username || base.passwo
   throw new Error('GATHER_TEST_URL must be an HTTP(S) origin without credentials.');
 }
 const origin = base.origin;
-const projectVars = new URL('../.dev.vars', import.meta.url);
-
-async function operatorPassword() {
-  if (process.env.GATHER_TEST_PASSWORD) return process.env.GATHER_TEST_PASSWORD;
-  let content;
-  try { content = await readFile(projectVars, 'utf8'); }
-  catch { throw new Error('Set GATHER_TEST_PASSWORD or configure ADMIN_PASSWORD in .dev.vars.'); }
-  const match = content.match(/^\s*ADMIN_PASSWORD\s*=\s*(.*?)\s*$/m);
-  if (!match) throw new Error('ADMIN_PASSWORD is required for meaningful auth isolation checks.');
-  let value = match[1];
-  if (value.startsWith('"') && value.endsWith('"')) {
-    try { value = JSON.parse(value); } catch { value = value.slice(1, -1); }
-  } else if (value.startsWith("'") && value.endsWith("'")) value = value.slice(1, -1);
-  else value = value.replace(/\s+#.*$/, '').trim();
-  if (!value) throw new Error('ADMIN_PASSWORD must not be empty for auth isolation checks.');
-  return value;
-}
-
 async function request(path, { method = 'GET', body, cookie, token, headers = {} } = {}) {
   const url = new URL(path, origin);
   if (token) url.searchParams.set('token', token);
@@ -59,40 +40,43 @@ function assertStatus(result, expected, operation) {
 function assertPublicSnapshot(data, { displayToken, micToken }) {
   assert.equal(typeof data, 'object', 'Snapshot must be an object');
   assert.equal(Object.hasOwn(data, 'displayToken'), false, 'Scoped snapshot must not include a display credential');
+  assert.equal(Object.hasOwn(data, 'ownerHash'), false, 'Snapshot must never expose browser ownership');
   assert.equal(Object.hasOwn(data, 'micToken'), false, 'Scoped snapshot must not include a microphone credential');
   const serialized = JSON.stringify(data);
   assert.equal(serialized.includes(displayToken), false, 'Scoped snapshot must not contain the display credential');
   assert.equal(serialized.includes(micToken), false, 'Scoped snapshot must not contain the microphone credential');
 }
 
-test('Cloudflare Worker authentication and room role isolation', async (suite) => {
-  const password = await operatorPassword();
+test('Passwordless browser ownership and room role isolation', async (suite) => {
   let cookie;
   let room;
   let cleanupCompleted = false;
 
-  await suite.test('anonymous access and forged operator headers cannot create rooms', async () => {
+  await suite.test('opening Gather creates a protected browser session without a password', async () => {
     const config = await request('/api/config');
     assertStatus(config, 200, 'Read configuration');
-    assert.equal(config.data.authenticated, false, 'Worker must require operator authentication');
-    assert.equal(config.data.operatorConfigured, true, 'An operator password must be configured');
-    assertStatus(await request('/api/rooms', { method: 'POST', body: {} }), 401, 'Anonymous room creation');
-    assertStatus(await request('/api/rooms', { method: 'POST', body: {}, headers: { 'X-Gather-Operator': 'true' } }), 401, 'Forged operator room creation');
+    assert.equal(config.data.authenticated, true);
+    assert.equal(config.data.operatorConfigured, true);
+    const setCookie = config.headers.get('set-cookie') || '';
+    assert.ok(/HttpOnly/i.test(setCookie));
+    assert.ok(/SameSite=Strict/i.test(setCookie));
+    if (base.protocol === 'https:') assert.ok(/;\s*Secure/i.test(setCookie));
+    cookie = setCookie.split(';')[0];
+    assert.ok(cookie.startsWith('gather_browser='));
+    const next = await request('/api/config', { cookie });
+    assert.equal(next.headers.get('set-cookie'), null, 'Existing browser session must remain stable');
   });
 
-  await suite.test('operator sign-in sets a protected session cookie', async () => {
-    assertStatus(await request('/api/login', { method: 'POST', body: { password: 'incorrect-' + crypto.randomUUID() } }), 401, 'Incorrect password');
-    const login = await request('/api/login', { method: 'POST', body: { password } });
-    assertStatus(login, 200, 'Operator login');
-    const setCookie = login.headers.get('set-cookie') || '';
-    assert.ok(/HttpOnly/i.test(setCookie), 'Operator cookie must be HttpOnly');
-    assert.ok(/SameSite=Strict/i.test(setCookie), 'Operator cookie must be same-site');
-    if (base.protocol === 'https:') assert.ok(/;\s*Secure/i.test(setCookie), 'HTTPS operator cookie must be secure');
-    cookie = setCookie.split(';')[0];
-    assert.ok(cookie.startsWith('gather_operator='), 'Operator cookie must be issued');
-    const config = await request('/api/config', { cookie });
-    assertStatus(config, 200, 'Authenticated configuration');
-    assert.equal(config.data.authenticated, true);
+  await suite.test('a first-time visitor can create immediately without a password or config request', async () => {
+    const created = await request('/api/rooms', { method: 'POST', body: {} });
+    assertStatus(created, 201, 'Passwordless direct creation');
+    const ownerCookie = created.headers.get('set-cookie')?.split(';')[0];
+    assert.ok(ownerCookie, 'Direct creation must remember its browser owner');
+    assert.equal(Object.hasOwn(created.data, 'ownerHash'), false);
+    const route = `/api/rooms/${created.data.id}`;
+    assertStatus(await request(route, { cookie: ownerCookie }), 200, 'Direct creator access');
+    assertStatus(await request(route, { cookie }), 401, 'Different browser access');
+    await request(`${route}/control`, { method: 'POST', cookie: ownerCookie, body: { action: 'stop' } });
   });
 
   try {
@@ -117,6 +101,18 @@ test('Cloudflare Worker authentication and room role isolation', async (suite) =
         assertPublicSnapshot(result.data, room);
       }
       assertStatus(await request(route), 401, 'Anonymous room read');
+    });
+
+    await suite.test('another browser and forged ownership headers cannot control this service', async () => {
+      const other = await request('/api/config');
+      const otherCookie = other.headers.get('set-cookie').split(';')[0];
+      assertStatus(await request(route, { cookie: otherCookie }), 401, 'Another browser read');
+      assertStatus(await request(`${route}/control`, { method: 'POST', cookie: otherCookie, body: { action: 'start' } }), 401, 'Another browser control');
+      assertStatus(await request(route, { headers: { 'X-Gather-Owner': 'a'.repeat(64), 'X-Gather-Operator': 'true' } }), 401, 'Forged ownership');
+      const read = await request(route, { cookie, token: room.displayToken });
+      assertStatus(read, 200, 'Owner using display link');
+      assertPublicSnapshot(read.data, room);
+      assertStatus(await request(`${route}/control`, { method: 'POST', cookie, token: room.displayToken, body: { action: 'start' } }), 403, 'Owner display link remains read-only');
     });
 
     await suite.test('display credentials cannot mutate state or invoke paid OpenAI endpoints', async () => {
@@ -147,7 +143,7 @@ test('Cloudflare Worker authentication and room role isolation', async (suite) =
       assertStatus(await request(`${route}/settings`, { method: 'PATCH', body: { churchName: 'Unwanted change' }, headers: { 'X-Gather-Operator': 'true' } }), 401, 'Forged anonymous role');
       assertStatus(await request(`${route}/control`, { method: 'POST', body: { action: 'start' }, token: room.displayToken, headers: { 'X-Gather-Operator': 'true' } }), 403, 'Forged display role');
       assertStatus(await request(`${route}/control`, { method: 'POST', cookie, body: { action: 'start' }, headers: { Origin: 'https://untrusted.example' } }), 403, 'Cross-origin authenticated control');
-      assertStatus(await request('/api/login', { method: 'POST', body: { password }, headers: { Origin: 'https://untrusted.example' } }), 403, 'Cross-origin login');
+      assertStatus(await request('/api/rooms', { method: 'POST', body: {}, headers: { Origin: 'https://untrusted.example' } }), 403, 'Cross-origin creation');
     });
 
     await suite.test('branding persists and reaches the read-only display snapshot', async () => {

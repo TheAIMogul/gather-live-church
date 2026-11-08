@@ -4,7 +4,6 @@ import path from 'node:path';
 
 const base=process.env.GATHER_TEST_URL || 'http://127.0.0.1:8787';
 const live=process.argv.includes('--live');
-const env=Object.fromEntries((await fs.readFile('.dev.vars','utf8')).split('\n').filter(x=>x.includes('=')).map(x=>{const i=x.indexOf('=');return[x.slice(0,i),x.slice(i+1)];}));
 await fs.mkdir('output/playwright',{recursive:true});
 const args=live?['--use-fake-ui-for-media-stream','--use-fake-device-for-media-stream',`--use-file-for-fake-audio-capture=${path.resolve('output/sermon-test.wav')}`]:[];
 const browser=await chromium.launch({headless:true,channel:'chrome',args});
@@ -15,9 +14,9 @@ async function noOverflow(page){expect(await page.evaluate(()=>document.document
 try{
  const demo=await browser.newContext({viewport:{width:1440,height:1100},reducedMotion:'reduce'});
  const page=await demo.newPage();captureErrors(page);
- await page.goto(base);await page.getByRole('heading',{name:/Sunday, together/}).waitFor();
+ await page.goto(base);await page.getByRole('button',{name:/See it in action/}).click();await page.getByRole('heading',{name:/See Gather in action/}).waitFor();
  await page.screenshot({path:'output/playwright/operator.png',fullPage:true});await noOverflow(page);
- await page.getByRole('button',{name:'Next sample phrase'}).click();
+ await page.getByRole('button',{name:'Pause translation'}).click();
  await page.getByRole('button',{name:'Next sample phrase'}).click();
  await expect(page.locator('.caption-target')).toContainText('Psalm 23:1');
  await page.getByRole('button',{name:'Display',exact:true}).click();
@@ -44,7 +43,7 @@ try{
  await demo.close();
  if(live){
   operator=await browser.newContext({viewport:{width:1440,height:1000}});
-  const login=await operator.request.post(base+'/api/login',{data:{password:env.ADMIN_PASSWORD}});expect(login.ok()).toBe(true);
+  const setup=await operator.request.get(base+'/api/config');expect(setup.ok()).toBe(true);
   const created=await operator.request.post(base+'/api/rooms',{data:{}});expect(created.status()).toBe(201);room=await created.json();
   await operator.addInitScript(id=>localStorage.setItem('gather-room-id',id),room.id);
   const op=await operator.newPage();captureErrors(op);await op.goto(base);await expect(op.getByRole('button',{name:'Start translation',exact:true})).toBeVisible();
