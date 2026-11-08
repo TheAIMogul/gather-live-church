@@ -4,7 +4,7 @@
 
 Gather connects a computer or phone microphone to OpenAI, interprets complete phrases in context, and shares animated Spanish ↔ English captions with a separate browser or projector. Scripture references have a distinct gold treatment. Branding and operator controls live separately from the audience display.
 
-Current deployment: [Open Gather](https://gather.micahberkley.com). No account or password is needed. Choose a microphone and language to create a service.
+Current deployment: [Open Gather](https://gather.micahberkley.com). No account or password is needed. Choose a microphone and language in the studio, then start a live service.
 
 ## What is included
 
@@ -62,7 +62,7 @@ npx wrangler secret put OPENAI_API_KEY
 
 Secrets belong in Cloudflare Worker secrets, never in frontend code, Git, or a `VITE_` variable. Optional model overrides are `OPENAI_TEXT_MODEL`, `OPENAI_REALTIME_MODEL`, and `OPENAI_TRANSCRIPTION_MODEL`. Deployment does not require a separate server or database service.
 
-To start a real service: choose the speaker language and microphone on the welcome screen, create a live service, start translation, and open the display URL on the projector. For a phone input, select Phone, start the service, scan its microphone QR code, and tap Connect microphone on the phone. Keep the phone page open. An internet-reachable HTTPS deployment allows the phone and projector to use different networks.
+To start a real service: choose the speaker language and microphone in the studio, create a live service, start translation, and open the display URL on the projector. For a phone input, select Phone, start the service, scan its microphone QR code, and tap Connect microphone on the phone. Keep the phone page open. An internet-reachable HTTPS deployment allows the phone and projector to use different networks.
 
 ## Meaning, scripture and motion
 

@@ -1,0 +1,55 @@
+/* Audience typography is sized for a room, with the message using the whole canvas. */
+.projection:not(.preview){padding:4.5vh 5vw}
+.projection:not(.preview) .projection-header{min-height:54px}
+.projection:not(.preview) .church-identity{font-size:clamp(22px,1.8vw,34px);gap:20px;letter-spacing:-.5px}
+.projection:not(.preview) .church-monogram{font-size:42px;padding-right:22px}
+.projection:not(.preview) .projection-status{font-size:16px;letter-spacing:1.5px;gap:12px}
+.projection:not(.preview) .projection-status i{width:9px;height:9px}
+.projection:not(.preview) .projection-message{padding:3vh 0 4vh}
+.projection:not(.preview) .previous-phrase{font-size:clamp(26px,2vw,38px);margin-bottom:24px;line-height:1.3}
+.projection:not(.preview) .phrase-eyebrow{font-size:18px;letter-spacing:2px;margin-bottom:20px;gap:12px}
+.projection:not(.preview) .phrase-eyebrow>svg{width:22px;height:22px}
+.projection:not(.preview) .verse-reference{font-size:22px;letter-spacing:0}
+.projection:not(.preview) .caption{max-width:none;line-height:1.12;letter-spacing:-.035em;overflow-wrap:anywhere}
+.projection:not(.preview) .original-caption{max-width:none;margin-top:24px;line-height:1.3;letter-spacing:-.02em;overflow-wrap:anywhere}
+.projection:not(.preview) .projection-summary{max-width:none;padding-top:20px}
+.projection:not(.preview) .projection-summary .eyebrow{font-size:16px;letter-spacing:1.6px}
+.projection:not(.preview) .projection-summary .eyebrow small{font-size:14px}
+.projection:not(.preview) .projection-summary p{font-size:clamp(24px,1.7vw,32px);line-height:1.35;margin-top:12px}
+.projection:not(.preview) .fullscreen-button{width:50px;height:50px;right:18px;bottom:14px}
+@media(max-width:640px){
+ .projection:not(.preview){padding:28px 24px}
+ .projection:not(.preview) .projection-header{min-height:40px;gap:12px}
+ .projection:not(.preview) .church-identity{font-size:16px;gap:12px;max-width:75%}
+ .projection:not(.preview) .church-monogram{font-size:30px;padding-right:12px}
+ .projection:not(.preview) .projection-status{font-size:11px;letter-spacing:1px;gap:7px}
+ .projection:not(.preview) .projection-status i{width:6px;height:6px}
+ .projection:not(.preview) .projection-message{padding:24px 0}
+ .projection:not(.preview) .previous-phrase{font-size:20px;margin-bottom:20px}
+ .projection:not(.preview) .phrase-eyebrow{font-size:12px;letter-spacing:1px;margin-bottom:16px;gap:8px}
+ .projection:not(.preview) .verse-reference{font-size:14px}
+ .projection:not(.preview) .phrase-eyebrow>svg{width:17px;height:17px}
+ .projection:not(.preview) .original-caption{margin-top:20px}
+ .projection:not(.preview) .projection-summary{padding-top:16px}
+ .projection:not(.preview) .projection-summary .eyebrow{font-size:12px;letter-spacing:1px}
+ .projection:not(.preview) .projection-summary .eyebrow small{font-size:11px}
+ .projection:not(.preview) .projection-summary p{font-size:19px;line-height:1.4;margin-top:10px}
+}
+.projection:not(.preview) .caption .dancing-word{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere}
+/* A preview still needs legible labels at normal browser zoom. */
+.projection.preview{min-height:360px}
+.projection.preview .church-identity,.projection.preview .church-identity>span:last-child{font-size:13px}
+.projection.preview .projection-status{font-size:10px;letter-spacing:1px}
+.projection.preview .phrase-eyebrow{font-size:10px;letter-spacing:1px}
+.projection.preview .verse-reference{font-size:11px}
+.projection.preview .original-caption{font-size:20px}
+.projection.preview .projection-summary .eyebrow,.projection.preview .projection-summary .eyebrow small{font-size:10px;letter-spacing:.7px}
+.projection.preview .projection-summary p{font-size:14px;line-height:1.4}
+@media(max-width:640px){
+ .projection.preview .caption,.small-projection .projection.preview .caption,.branding-preview .projection.preview .caption{font-size:clamp(24px,calc(var(--caption-size) * .4),44px)}
+ .projection.preview .original-caption{font-size:18px}
+ .projection.preview .church-identity,.projection.preview .church-identity>span:last-child{font-size:12px}
+}
+@media(max-width:640px){
+ .projection.preview,.small-projection .projection.preview,.branding-preview .projection.preview{aspect-ratio:auto;width:100%;min-width:0}
+}

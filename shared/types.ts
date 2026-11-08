@@ -21,7 +21,7 @@ export interface RoomState {
 }
 export const defaultSettings: DisplaySettings = {
   churchName: 'Grace Community', serviceName: 'Sunday service', logo: null,
-  logoPosition: 'left', logoSize: 48, theme: 'frost', textSize: 68,
+  logoPosition: 'left', logoSize: 48, theme: 'frost', textSize: 110,
   showOriginal: true, showSummary: true, motion: 'fluid', accentColor: '#f47342',
 };
 export type RoomEvent = { type: 'state'; state: RoomState } | { type: 'error'; message: string } | { type: 'pong' };

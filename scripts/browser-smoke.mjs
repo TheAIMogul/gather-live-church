@@ -14,7 +14,7 @@ async function noOverflow(page){expect(await page.evaluate(()=>document.document
 try{
  const demo=await browser.newContext({viewport:{width:1440,height:1100},reducedMotion:'reduce'});
  const page=await demo.newPage();captureErrors(page);
- await page.goto(base);await page.getByRole('button',{name:/See it in action/}).click();await page.getByRole('heading',{name:/See Gather in action/}).waitFor();
+ await page.goto(base);await page.getByRole('heading',{name:/Sunday, together/}).waitFor();await page.getByRole('button',{name:'Play the demo',exact:true}).click();
  await page.screenshot({path:'output/playwright/operator.png',fullPage:true});await noOverflow(page);
  await page.getByRole('button',{name:'Pause translation'}).click();
  await page.getByRole('button',{name:'Next sample phrase'}).click();

@@ -8,6 +8,16 @@ export const examples:[string,string,Segment['kind'],string|null,boolean][]=[
  ['Podemos ser una luz para nuestra comunidad.','We can be a light for our community.','paraphrase','Possible reference · Matthew 5:14',false],
 ];
 export function makeDemo():RoomState{return {id:'demo',status:'idle',mode:'demo',sourceLanguage:'es',targetLanguage:'en',settings:{...defaultSettings},segments:[],summary:"God's care gives us courage to care for one another.",blank:false,micConnected:false,micName:'Demo audio',displayToken:'demo',micToken:'demo'};}
-export function readDemo():RoomState{try{const data=JSON.parse(localStorage.getItem(demoKey)||'null');return data?.mode==='demo'?{...makeDemo(),...data,settings:{...defaultSettings,...data.settings}}:makeDemo();}catch{return makeDemo();}}
-export function saveDemo(state:RoomState){localStorage.setItem(demoKey,JSON.stringify(state));}
+export function readDemo():RoomState{
+ try{
+  const data=JSON.parse(localStorage.getItem(demoKey)||'null');
+  if(data?.mode!=='demo')return makeDemo();
+  const settings={...defaultSettings,...data.settings};
+  if(!data.typographyVersion&&settings.textSize===68)settings.textSize=defaultSettings.textSize;
+  const state={...makeDemo(),...data,settings};
+  if(!data.typographyVersion)saveDemo(state);
+  return state;
+ }catch{return makeDemo();}
+}
+export function saveDemo(state:RoomState){localStorage.setItem(demoKey,JSON.stringify({...state,typographyVersion:2}));}
 export function nextDemo(state:RoomState):RoomState{const example=examples[state.segments.length%examples.length];const reversed=state.sourceLanguage==='en';const segment:Segment={id:crypto.randomUUID(),source:example[reversed?1:0],translation:example[reversed?0:1],kind:example[2],reference:example[3],verified:example[4],timestamp:Date.now()};return {...state,segments:[...state.segments.slice(-99),segment],summaryUpdatedAt:Date.now()};}

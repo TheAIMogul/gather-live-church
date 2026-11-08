@@ -4,7 +4,7 @@ import { defaultSettings, type DisplaySettings, type RoomState } from '../shared
 import { createRealtimeSession, interpretPhrase, summarize } from './openai';
 
 type Role = 'operator' | 'microphone' | 'display';
-type StoredRoom = RoomState & { ownerHash: string; displayToken: string; micToken: string; revision: number; expiresAt: number; summaryAttemptAt?: number; inputLease?: { clientId: string; until: number; generation: string } };
+type StoredRoom = RoomState & { typographyVersion?: number; ownerHash: string; displayToken: string; micToken: string; revision: number; expiresAt: number; summaryAttemptAt?: number; inputLease?: { clientId: string; until: number; generation: string } };
 const retention = 24 * 3600_000;
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers: { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
 class HttpError extends Error { constructor(message: string, readonly status = 400) { super(message); } }
@@ -76,7 +76,14 @@ export class Room extends DurableObject<Env> {
   private mintTimes: number[] = [];
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-    ctx.blockConcurrencyWhile(async () => { this.room = await ctx.storage.get<StoredRoom>('room'); });
+    ctx.blockConcurrencyWhile(async () => {
+      this.room = await ctx.storage.get<StoredRoom>('room');
+      if (this.room && !this.room.typographyVersion) {
+        if (this.room.settings.textSize === 68) this.room.settings.textSize = defaultSettings.textSize;
+        this.room.typographyVersion = 2;
+        await ctx.storage.put('room', this.room);
+      }
+    });
   }
   private role(request: Request): Role | null {
     const token = new URL(request.url).searchParams.get('token');
@@ -89,7 +96,7 @@ export class Room extends DurableObject<Env> {
     return this.room.ownerHash && request.headers.get('X-Gather-Owner') === this.room.ownerHash ? 'operator' : null;
   }
   private snapshot(role: Role): RoomState {
-    const { ownerHash: _ownerHash, revision: _revision, expiresAt: _expiresAt, inputLease: _inputLease, summaryAttemptAt: _summaryAttemptAt, displayToken, micToken, ...state } = this.room!;
+    const { typographyVersion: _typographyVersion, ownerHash: _ownerHash, revision: _revision, expiresAt: _expiresAt, inputLease: _inputLease, summaryAttemptAt: _summaryAttemptAt, displayToken, micToken, ...state } = this.room!;
     return role === 'operator' ? { ...state, displayToken, micToken } : state;
   }
   private async save(): Promise<void> {
@@ -139,7 +146,7 @@ export class Room extends DurableObject<Env> {
       if (this.room) throw new HttpError('This service already exists.', 409);
       const initial = await readJson(request);
       this.room = {
-        id, ownerHash, status: 'idle', mode: 'live', sourceLanguage: initial.sourceLanguage === 'en' ? 'en' : 'es',
+        id, ownerHash, typographyVersion: 2, status: 'idle', mode: 'live', sourceLanguage: initial.sourceLanguage === 'en' ? 'en' : 'es',
         targetLanguage: initial.sourceLanguage === 'en' ? 'es' : 'en', settings: { ...defaultSettings },
         segments: [], summary: '', blank: false, micConnected: false, micName: '',
         displayToken: crypto.randomUUID().replaceAll('-', ''), micToken: crypto.randomUUID().replaceAll('-', ''),
